@@ -5,7 +5,7 @@ from flask_restx import Namespace, Resource
 from CTFd.utils.config import is_setup
 from CTFd.utils.initialization import setup_ctf
 from CTFd.models import Users
-from CTFd.utils import validators
+from CTFd.utils.validators.users import validate_admin_user
 
 init_namespace = Namespace("init", description="Endpoint to initialize CTFd")
 
@@ -30,42 +30,11 @@ class Setup(Resource):
 
         data = request.get_json()
 
-        errors = []
-        # Administration
-        name = data.get("name", "").strip()
-        email = data.get("email", "").strip()
-        password = data.get("password", "").strip()
-
-        name_len = len(name) == 0
-        names = (
-            Users.query.add_columns(Users.name, Users.id)
-            .filter_by(name=name)
-            .first()
+        errors = validate_admin_user(
+            name=data.get("name"),
+            email=data.get("email"),
+            password=data.get("password"),
         )
-        emails = (
-            Users.query.add_columns(Users.email, Users.id)
-            .filter_by(email=email)
-            .first()
-        )
-        pass_short = len(password) == 0
-        pass_long = len(password) > 128
-        valid_email = validators.validate_email(email)
-        team_name_email_check = validators.validate_email(name)
-
-        if not valid_email:
-            errors.append("Please enter a valid email address")
-        if names:
-            errors.append("That user name is already taken")
-        if team_name_email_check is True:
-            errors.append("Your user name cannot be an email address")
-        if emails:
-            errors.append("That email has already been used")
-        if pass_short:
-            errors.append("Pick a longer password")
-        if pass_long:
-            errors.append("Pick a shorter password")
-        if name_len:
-            errors.append("Pick a longer user name")
 
         if len(errors) > 0:
             return {"success": False, "errors": errors}, 400
