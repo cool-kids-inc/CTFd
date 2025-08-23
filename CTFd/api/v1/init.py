@@ -1,3 +1,4 @@
+import secrets
 from flask import request, current_app
 from flask_restx import Namespace, Resource
 
@@ -15,8 +16,13 @@ class Setup(Resource):
         if not current_app.config.get("INIT_API_ENABLED"):
             return {"success": False, "message": "API is not enabled"}, 403
 
-        token = request.headers.get("Authorization", "").split(" ")[-1]
-        if not token == current_app.config.get("INIT_API_TOKEN"):
+        auth_header = request.headers.get("Authorization", "")
+        parts = auth_header.split()
+        if len(parts) != 2 or parts[0] != "Bearer":
+            return {"success": False, "message": "Invalid token format"}, 401
+        token = parts[1]
+
+        if not secrets.compare_digest(token, current_app.config.get("INIT_API_TOKEN", "")):
             return {"success": False, "message": "Invalid token"}, 401
 
         if is_setup():
