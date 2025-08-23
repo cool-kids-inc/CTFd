@@ -261,6 +261,10 @@ class ServerConfig(object):
     OAUTH_CLIENT_ID: str = empty_str_cast(config_ini["oauth"]["OAUTH_CLIENT_ID"])
     OAUTH_CLIENT_SECRET: str = empty_str_cast(config_ini["oauth"]["OAUTH_CLIENT_SECRET"])
 
+    # === INIT ===
+    INIT_API_ENABLED: bool = process_boolean_str(empty_str_cast(config_ini["init"].get("INIT_API_ENABLED", False), default=False))
+    INIT_API_TOKEN: str = empty_str_cast(config_ini["init"].get("INIT_API_TOKEN", ""))
+
     # === MANAGEMENT ===
     PRESET_ADMIN_NAME: str = empty_str_cast(config_ini["management"].get("PRESET_ADMIN_NAME", "")) if config_ini.has_section("management") else None
     PRESET_ADMIN_EMAIL: str = empty_str_cast(config_ini["management"].get("PRESET_ADMIN_EMAIL", "")) if config_ini.has_section("management") else None

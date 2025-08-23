@@ -48,6 +48,183 @@ from CTFd.utils.user import (
     get_locale,
     is_admin,
 )
+from CTFd.models import Admins, Pages, db
+from CTFd.utils import get_config, set_config
+from CTFd.utils.uploads import upload_file
+from CTFd.utils.email import (
+    DEFAULT_PASSWORD_RESET_BODY,
+    DEFAULT_PASSWORD_RESET_SUBJECT,
+    DEFAULT_SUCCESSFUL_REGISTRATION_EMAIL_BODY,
+    DEFAULT_SUCCESSFUL_REGISTRATION_EMAIL_SUBJECT,
+    DEFAULT_USER_CREATION_EMAIL_BODY,
+    DEFAULT_USER_CREATION_EMAIL_SUBJECT,
+    DEFAULT_VERIFICATION_EMAIL_BODY,
+    DEFAULT_VERIFICATION_EMAIL_SUBJECT,
+)
+from CTFd.constants.config import ConfigTypes
+from CTFd.constants.themes import DEFAULT_THEME
+
+def setup_ctf(args):
+    # General
+    ctf_name = args.get("ctf_name")
+    ctf_description = args.get("ctf_description")
+    user_mode = args.get("user_mode")
+    set_config("ctf_name", ctf_name)
+    set_config("ctf_description", ctf_description)
+    set_config("user_mode", user_mode)
+
+    # Settings
+    challenge_visibility = args.get("challenge_visibility")
+    account_visibility = args.get("account_visibility")
+    score_visibility = args.get("score_visibility")
+    registration_visibility = args.get("registration_visibility")
+    verify_emails = args.get("verify_emails")
+    social_shares = args.get("social_shares")
+    team_size = args.get("team_size")
+
+    # Style
+    ctf_logo = args.get("ctf_logo")
+    if ctf_logo:
+        f = upload_file(file=ctf_logo)
+        set_config("ctf_logo", f.location)
+
+    ctf_small_icon = args.get("ctf_small_icon")
+    if ctf_small_icon:
+        f = upload_file(file=ctf_small_icon)
+        set_config("ctf_small_icon", f.location)
+
+    theme = args.get("ctf_theme", DEFAULT_THEME)
+    set_config("ctf_theme", theme)
+    theme_color = args.get("theme_color")
+    theme_header = get_config("theme_header")
+    if theme_color and bool(theme_header) is False:
+        # Uses {{ and }} to insert curly braces while using the format method
+        css = (
+            '<style id="theme-color">\n'
+            ":root {{--theme-color: {theme_color};}}\n"
+            ".navbar{{background-color: var(--theme-color) !important;}}\n"
+            ".jumbotron{{background-color: var(--theme-color) !important;}}\n"
+            "</style>\n"
+        ).format(theme_color=theme_color)
+        set_config("theme_header", css)
+
+    # DateTime
+    start = args.get("start")
+    end = args.get("end")
+    set_config("start", start)
+    set_config("end", end)
+    set_config("freeze", None)
+
+    # Administration
+    name = args.get("name")
+    email = args.get("email")
+    password = args.get("password")
+
+    admin = Admins(
+        name=name, email=email, password=password, type="admin", hidden=True
+    )
+
+    # Create an empty index page
+    page = Pages(title=ctf_name, route="index", content="", draft=False)
+
+    # Upload banner
+    default_ctf_banner_location = url_for("views.themes", path="img/logo.png")
+    ctf_banner = args.get("ctf_banner")
+    if ctf_banner:
+        f = upload_file(file=ctf_banner, page_id=page.id)
+        default_ctf_banner_location = url_for("views.files", path=f.location)
+        set_config("ctf_banner", f.location)
+
+    # Splice in our banner
+    index = f"""<div class="row">
+<div class="col-md-6 offset-md-3">
+<img class="w-100 mx-auto d-block" style="max-width: 500px;padding: 50px;padding-top: 14vh;" src="{default_ctf_banner_location}" />
+<h3 class="text-center">
+    <p>A cool CTF platform from <a href="https://ctfd.io">ctfd.io</a></p>
+    <p>Follow us on social media:</p>
+    <a href="https://twitter.com/ctfdio"><i class="fab fa-twitter fa-2x" aria-hidden="true"></i></a>&nbsp;
+    <a href="https://facebook.com/ctfdio"><i class="fab fa-facebook fa-2x" aria-hidden="true"></i></a>&nbsp;
+    <a href="https://github.com/ctfd"><i class="fab fa-github fa-2x" aria-hidden="true"></i></a>
+</h3>
+<br>
+<h4 class="text-center">
+    <a href="admin">Click here</a> to login and setup your CTF
+</h4>
+</div>
+</div>"""
+    page.content = index
+
+    # Visibility
+    set_config(ConfigTypes.CHALLENGE_VISIBILITY, challenge_visibility)
+    set_config(ConfigTypes.REGISTRATION_VISIBILITY, registration_visibility)
+    set_config(ConfigTypes.SCORE_VISIBILITY, score_visibility)
+    set_config(ConfigTypes.ACCOUNT_VISIBILITY, account_visibility)
+
+    # Verify emails
+    set_config("verify_emails", verify_emails)
+
+    # Social shares
+    set_config("social_shares", social_shares)
+
+    # Team Size
+    set_config("team_size", team_size)
+
+    set_config("mail_server", None)
+    set_config("mail_port", None)
+    set_config("mail_tls", None)
+    set_config("mail_ssl", None)
+    set_config("mail_username", None)
+    set_config("mail_password", None)
+    set_config("mail_useauth", None)
+
+    # Set up default emails
+    set_config("verification_email_subject", DEFAULT_VERIFICATION_EMAIL_SUBJECT)
+    set_config("verification_email_body", DEFAULT_VERIFICATION_EMAIL_BODY)
+
+    set_config(
+        "successful_registration_email_subject",
+        DEFAULT_SUCCESSFUL_REGISTRATION_EMAIL_SUBJECT,
+    )
+    set_config(
+        "successful_registration_email_body",
+        DEFAULT_SUCCESSFUL_REGISTRATION_EMAIL_BODY,
+    )
+
+    set_config(
+        "user_creation_email_subject", DEFAULT_USER_CREATION_EMAIL_SUBJECT
+    )
+    set_config("user_creation_email_body", DEFAULT_USER_CREATION_EMAIL_BODY)
+
+    set_config("password_reset_subject", DEFAULT_PASSWORD_RESET_SUBJECT)
+    set_config("password_reset_body", DEFAULT_PASSWORD_RESET_BODY)
+
+    set_config(
+        "password_change_alert_subject",
+        "Password Change Confirmation for {ctf_name}",
+    )
+    set_config(
+        "password_change_alert_body",
+        (
+            "Your password for {ctf_name} has been changed.\n\n"
+            "If you didn't request a password change you can reset your password here: {url}"
+        ),
+    )
+
+    set_config("setup", True)
+
+    try:
+        db.session.add(admin)
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+
+    try:
+        db.session.add(page)
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+
+    return admin
 
 
 def init_cli(app):
@@ -223,6 +400,7 @@ def init_request_processors(app):
                 "views.files",
                 "views.healthcheck",
                 "views.robots",
+                "api.init_setup",
             ):
                 return
             else:
@@ -323,6 +501,8 @@ def init_request_processors(app):
 
     @app.before_request
     def tokens():
+        if request.endpoint == "api.init_setup":
+            return
         token = request.headers.get("Authorization")
         if token and (
             request.mimetype == "application/json"
