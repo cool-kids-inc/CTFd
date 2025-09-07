@@ -1,26 +1,25 @@
-from collections import namedtuple
+from dataclasses import dataclass, fields
+from typing import Any
 
-# TODO: CTFd 4.0. Consider changing to a dataclass
-TeamAttrsFields = [
-    "id",
-    "oauth_id",
-    "name",
-    "email",
-    "secret",
-    "website",
-    "affiliation",
-    "country",
-    "bracket_id",
-    "hidden",
-    "banned",
-    "captain_id",
-    "created",
-]
-TeamAttrs = namedtuple(
-    "TeamAttrs",
-    TeamAttrsFields,
-    defaults=(None,) * len(TeamAttrsFields),
-)
+
+@dataclass(frozen=True)
+class TeamAttrs:
+    id: Any = None
+    oauth_id: Any = None
+    name: Any = None
+    email: Any = None
+    secret: Any = None
+    website: Any = None
+    affiliation: Any = None
+    country: Any = None
+    bracket_id: Any = None
+    hidden: Any = None
+    banned: Any = None
+    captain_id: Any = None
+    created: Any = None
+
+
+TeamAttrsFields = [f.name for f in fields(TeamAttrs)]
 
 
 class _TeamAttrsWrapper:

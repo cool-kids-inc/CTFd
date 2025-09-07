@@ -7,8 +7,8 @@ from flask import redirect, request, session, url_for
 
 from CTFd.cache import cache, clear_user_session
 from CTFd.constants.languages import Languages
-from CTFd.constants.teams import TeamAttrs
-from CTFd.constants.users import UserAttrs
+from CTFd.constants.teams import TeamAttrs, TeamAttrsFields
+from CTFd.constants.users import UserAttrs, UserAttrsFields
 from CTFd.models import Fails, Teams, Tracking, Users, db
 from CTFd.utils import get_config
 from CTFd.utils.security.auth import logout_user
@@ -50,9 +50,7 @@ def get_current_user_attrs():
 def get_user_attrs(user_id):
     user = Users.query.filter_by(id=user_id).first()
     if user:
-        d = {}
-        for field in UserAttrs._fields:
-            d[field] = getattr(user, field)
+        d = {field: getattr(user, field) for field in UserAttrsFields}
         return UserAttrs(**d)
     return None
 
@@ -113,9 +111,7 @@ def get_current_team_attrs():
 def get_team_attrs(team_id):
     team = Teams.query.filter_by(id=team_id).first()
     if team:
-        d = {}
-        for field in TeamAttrs._fields:
-            d[field] = getattr(team, field)
+        d = {field: getattr(team, field) for field in TeamAttrsFields}
         return TeamAttrs(**d)
     return None
 
